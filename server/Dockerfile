@@ -13,7 +13,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安装所有依赖（包括开发依赖）
-RUN npm ci --frozen-lockfile
+RUN npm ci
 
 # 复制源代码
 COPY . .
@@ -36,7 +36,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 只安装生产依赖并清理缓存
-RUN npm ci --only=production --frozen-lockfile && \
+RUN npm ci --omit=dev && \
     npm cache clean --force
 
 # 从构建阶段复制编译产物
