@@ -144,7 +144,7 @@ app.post("/api/upload", async (c) => {
       slug: project.slug,
       name: projectName,
       message: "HTML文件上传成功",
-      url: `/api/projects/${project.slug}/`,
+      url: `/projects/${project.slug}/`,
     })
   } catch (error) {
     return handleError(c, error, "上传失败")
