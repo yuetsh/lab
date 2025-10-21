@@ -12,9 +12,6 @@ RUN bun install
 # 构建项目
 RUN bun run build
 
-# 确保数据库文件目录存在且有正确权限
-RUN mkdir -p /app && chmod 777 /app
-
 # 暴露端口
 EXPOSE 3000
 
