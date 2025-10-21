@@ -1,9 +1,10 @@
 FROM node:24-alpine
 
-# 使用中科大镜像源加速包安装
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
 
 RUN apk add --no-cache python3 make g++
+
+RUN npm config set registry https://registry.npmmirror.com
 
 WORKDIR /app
 
