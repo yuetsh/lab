@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
 import * as schema from './schema'
 
-const dbPath = `${process.cwd()}/uploads.db`
+const dbPath = `${process.cwd()}/data/uploads.db`
 const sqlite = new Database(dbPath)
 const db = drizzle(sqlite, { schema })
 
