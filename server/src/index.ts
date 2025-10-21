@@ -123,16 +123,31 @@ app.post("/api/upload", async (c) => {
     const file = formData.get("file") as globalThis.File
     const projectName = formData.get("projectName") as string
 
+    // 输入验证
     if (!file) {
       return c.json({ error: "没有选择文件" }, 400)
     }
 
+    if (!projectName || projectName.trim().length === 0) {
+      return c.json({ error: "项目名称不能为空" }, 400)
+    }
+
+    if (projectName.length > 50) {
+      return c.json({ error: "项目名称不能超过50个字符" }, 400)
+    }
+
+    // 文件类型和大小验证
     if (!file.name.endsWith(".html")) {
       return c.json({ error: "只支持HTML文件" }, 400)
     }
 
-    if (!projectName) {
-      return c.json({ error: "项目名称不能为空" }, 400)
+    const maxFileSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxFileSize) {
+      return c.json({ error: "文件大小不能超过5MB" }, 400)
+    }
+
+    if (file.size === 0) {
+      return c.json({ error: "文件不能为空" }, 400)
     }
 
     const project = await createProject(projectName, file.name)
