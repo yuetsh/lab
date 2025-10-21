@@ -11,7 +11,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci --only=production
+RUN npm ci
 
 COPY . .
 
@@ -20,11 +20,16 @@ RUN npm run build
 # 生产阶段
 FROM node:24-alpine AS production
 
+RUN npm config set registry https://registry.npmmirror.com
+
 WORKDIR /app
 
-COPY --from=builder /app/node_modules ./node_modules
+# 只复制生产依赖
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# 只复制构建产物
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
 
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001
