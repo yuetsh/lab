@@ -1,13 +1,11 @@
-import { createClient } from '@libsql/client'
-import { drizzle } from 'drizzle-orm/libsql'
+import { Database } from 'bun:sqlite'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { join } from 'path'
 import * as schema from './schema'
 
 const dbPath = join(process.cwd(), 'uploads.db')
-const client = createClient({
-  url: `file:${dbPath}`
-})
-const db = drizzle(client, { schema })
+const sqlite = new Database(dbPath)
+const db = drizzle(sqlite, { schema })
 
 // 初始化数据库表
 export async function initDatabase() {
