@@ -5,14 +5,12 @@ import { useProjects } from "./composables/useProjects"
 
 const { projects, fetchProjects } = useProjects()
 
-const getApiBase = () => {
+function getApiBase() {
   if (window.location.hostname !== "localhost") {
-    return "/api"
+    return `${window.location.protocol}//${window.location.host}/api`
   }
   return "http://localhost:3000/api"
 }
-
-const API_BASE = getApiBase()
 
 onMounted(() => {
   fetchProjects()
@@ -23,7 +21,7 @@ onMounted(() => {
   <div class="app">
     <ProjectManager
       :projects="projects"
-      :api-base="API_BASE"
+      :api-base="getApiBase()"
       @project-uploaded="fetchProjects"
     />
   </div>

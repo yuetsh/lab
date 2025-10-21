@@ -24,16 +24,37 @@ const fileInput = ref<HTMLInputElement>()
 
 const handleFileSelect = () => {
   const file = fileInput.value?.files?.[0]
-  if (file && file.name.endsWith(".html")) {
-    uploadProject(file)
-  } else {
+  if (!file) return
+  
+  // 文件类型验证
+  if (!file.name.endsWith(".html")) {
     showMessage("请选择HTML文件", "error")
+    return
   }
+  
+  // 文件大小验证 (5MB)
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    showMessage("文件大小不能超过5MB", "error")
+    return
+  }
+  
+  if (file.size === 0) {
+    showMessage("文件不能为空", "error")
+    return
+  }
+  
+  uploadProject(file)
 }
 
 const uploadProject = async (file: File) => {
   if (!projectName.value.trim()) {
     showMessage("请输入项目名称", "error")
+    return
+  }
+  
+  if (projectName.value.length > 50) {
+    showMessage("项目名称不能超过50个字符", "error")
     return
   }
 
@@ -129,7 +150,10 @@ const deleteProject = async (projectSlug: string, projectName: string) => {
             id="projectName"
             placeholder="请输入项目名称"
             class="form-input"
+            maxlength="50"
+            :disabled="isUploading"
           />
+          <small class="input-hint">最多50个字符</small>
         </div>
 
         <div class="file-upload">
@@ -139,6 +163,7 @@ const deleteProject = async (projectSlug: string, projectName: string) => {
             accept=".html"
             @change="handleFileSelect"
             style="display: none"
+            :disabled="isUploading"
           />
           <button
             @click="fileInput?.click()"
@@ -294,13 +319,25 @@ const deleteProject = async (projectSlug: string, projectName: string) => {
   box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
+.form-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.input-hint {
+  color: #666;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
 .upload-button {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  padding: 15px 30px;
-  font-size: 16px;
-  border-radius: 25px;
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
@@ -468,11 +505,12 @@ const deleteProject = async (projectSlug: string, projectName: string) => {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   text-decoration: none;
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-radius: 6px;
   text-align: center;
   font-weight: 500;
   transition: all 0.3s ease;
+  font-size: 13px;
 }
 
 .visit-button:hover {
@@ -484,11 +522,12 @@ const deleteProject = async (projectSlug: string, projectName: string) => {
 .delete-button {
   color: white;
   border: none;
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.3s ease;
+  font-size: 13px;
 }
 
 .copy-button {
@@ -514,11 +553,12 @@ const deleteProject = async (projectSlug: string, projectName: string) => {
 .deactivate-button {
   color: white;
   border: none;
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.3s ease;
+  font-size: 13px;
 }
 
 .activate-button {
