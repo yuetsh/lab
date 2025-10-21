@@ -3,9 +3,6 @@
 # ===========================================
 FROM node:24-alpine AS builder
 
-# 设置镜像源加速
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
-
 # 设置 npm 镜像源
 RUN npm config set registry https://registry.npmmirror.com
 
@@ -28,9 +25,6 @@ RUN npm run build
 # 生产阶段 - 最小化运行时镜像
 # ===========================================
 FROM node:24-alpine AS production
-
-# 设置镜像源加速
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
 
 # 设置 npm 镜像源
 RUN npm config set registry https://registry.npmmirror.com
