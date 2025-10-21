@@ -1,11 +1,13 @@
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { createClient } from '@libsql/client'
+import { drizzle } from 'drizzle-orm/libsql'
 import { join } from 'path'
 import * as schema from './schema'
 
 const dbPath = join(process.cwd(), 'uploads.db')
-const sqlite = new Database(dbPath)
-const db = drizzle(sqlite, { schema })
+const client = createClient({
+  url: `file:${dbPath}`
+})
+const db = drizzle(client, { schema })
 
 // 初始化数据库表
 export async function initDatabase() {
