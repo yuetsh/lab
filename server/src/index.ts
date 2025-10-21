@@ -1,5 +1,4 @@
 import { Hono } from "hono"
-import { serve } from "@hono/node-server"
 import { cors } from "hono/cors"
 import db, { schema, initDatabase } from "./database"
 import { eq, desc } from "drizzle-orm"
@@ -214,7 +213,7 @@ initDatabase()
     console.log("数据库初始化完成")
     console.log(`服务器运行在 http://localhost:${port}`)
 
-    serve({
+    Bun.serve({
       fetch: app.fetch,
       port,
     })
