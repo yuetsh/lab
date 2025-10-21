@@ -1,6 +1,8 @@
 FROM node:24-alpine
 
-# 安装 Python 和构建工具来支持 better-sqlite3 编译
+# 使用中科大镜像源加速包安装
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+
 RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
