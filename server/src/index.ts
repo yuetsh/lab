@@ -71,7 +71,7 @@ app.get("/api/projects", async (c) => {
     const projectList = await db
       .select()
       .from(schema.projects)
-      .orderBy(desc(schema.projects.uploadedAt))
+      .orderBy(desc(schema.projects.id))
 
     return c.json(projectList)
   } catch (error) {
