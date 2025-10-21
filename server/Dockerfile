@@ -48,6 +48,9 @@ RUN addgroup -g 1001 -S appgroup && \
 # 设置文件权限
 RUN chown -R harbor:appgroup /app
 
+# 确保数据库文件目录存在且有正确权限
+RUN mkdir -p /app && chown -R harbor:appgroup /app
+
 # 切换到非 root 用户
 USER harbor
 
