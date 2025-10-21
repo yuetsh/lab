@@ -79,14 +79,8 @@ app.get("/api/projects", async (c) => {
   }
 })
 
-// 代理路由：将 /projects/:slug 重定向到 /api/projects/:slug
+// 项目访问路由 - 直接处理项目内容
 app.get("/projects/:slug", async (c) => {
-  const slug = c.req.param("slug")
-  return c.redirect(`/api/projects/${slug}`)
-})
-
-// 获取项目内容（托管）
-app.get("/api/projects/:slug", async (c) => {
   try {
     const slug = c.req.param("slug")
     const project = await findProjectBySlug(slug)
@@ -120,6 +114,7 @@ app.get("/api/projects/:slug", async (c) => {
     return handleError(c, error, "获取项目内容失败")
   }
 })
+
 
 // 项目上传API
 app.post("/api/upload", async (c) => {
