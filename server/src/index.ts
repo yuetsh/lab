@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import db, { schema, initDatabase } from "./database"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, like } from "drizzle-orm"
 import { randomBytes } from "crypto"
 
 const app = new Hono()
@@ -68,12 +68,26 @@ const handleError = (
 // 获取项目列表
 app.get("/api/projects", async (c) => {
   try {
-    const projectList = await db
-      .select()
-      .from(schema.projects)
-      .orderBy(desc(schema.projects.id))
-
-    return c.json(projectList)
+    const searchQuery = c.req.query("search")
+    
+    // 如果有搜索查询，添加搜索条件
+    if (searchQuery && searchQuery.trim()) {
+      const searchTerm = `%${searchQuery.trim()}%`
+      const projectList = await db
+        .select()
+        .from(schema.projects)
+        .where(like(schema.projects.name, searchTerm))
+        .orderBy(desc(schema.projects.id))
+      
+      return c.json(projectList)
+    } else {
+      const projectList = await db
+        .select()
+        .from(schema.projects)
+        .orderBy(desc(schema.projects.id))
+      
+      return c.json(projectList)
+    }
   } catch (error) {
     return handleError(c, error, "获取项目列表失败")
   }
