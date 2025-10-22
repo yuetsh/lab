@@ -15,14 +15,9 @@ export function useMessage() {
     }
   }
 
-  const clearMessage = () => {
-    message.value = ''
-  }
-
   return {
     message,
     messageType,
-    showMessage,
-    clearMessage
+    showMessage
   }
 }

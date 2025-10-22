@@ -8,13 +8,6 @@ export interface Project {
   uploadedAt: string
 }
 
-// API响应类型
-export interface ApiResponse<T = any> {
-  data?: T
-  error?: string
-  message?: string
-}
-
 // 上传响应类型
 export interface UploadResponse {
   id: number

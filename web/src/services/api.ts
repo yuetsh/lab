@@ -31,7 +31,10 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
 // API方法
 export const api = {
   // 获取项目列表
-  getProjects: (): Promise<Project[]> => request<Project[]>("/projects"),
+  getProjects: (searchQuery?: string): Promise<Project[]> => {
+    const url = searchQuery ? `/projects?search=${encodeURIComponent(searchQuery)}` : "/projects"
+    return request<Project[]>(url)
+  },
 
   // 上传项目
   uploadProject: (formData: FormData): Promise<UploadResponse> => {
