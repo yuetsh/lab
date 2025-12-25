@@ -27,12 +27,14 @@ const findProjectBySlug = async (slug: string) => {
 // 辅助函数：创建项目
 const createProject = async (name: string, entryPoint: string) => {
   const slug = generateSlug()
+  const uploadedAt = new Date().toISOString()
   const projectResult = await db
     .insert(schema.projects)
     .values({
       slug,
       name,
       entryPoint,
+      uploadedAt,
     })
     .returning({ id: schema.projects.id, slug: schema.projects.slug })
   return projectResult[0]
@@ -45,12 +47,14 @@ const storeFile = async (
   filename: string
 ) => {
   const content = await file.text()
+  const uploadedAt = new Date().toISOString()
   await db.insert(schema.files).values({
     filename,
     originalName: file.name,
     content,
     size: file.size,
     projectId,
+    uploadedAt,
   })
 }
 
