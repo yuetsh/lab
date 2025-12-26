@@ -97,6 +97,31 @@ app.get("/api/projects", async (c) => {
   }
 })
 
+// 获取项目详情（包括文件内容）
+app.get("/api/projects/:slug", async (c) => {
+  try {
+    const slug = c.req.param("slug")
+    const project = await findProjectBySlug(slug)
+
+    if (!project) {
+      return c.json({ error: "项目不存在" }, 404)
+    }
+
+    // 查找项目中的文件
+    const projectFiles = await db
+      .select()
+      .from(schema.files)
+      .where(eq(schema.files.projectId, project.id))
+
+    return c.json({
+      ...project,
+      files: projectFiles,
+    })
+  } catch (error) {
+    return handleError(c, error, "获取项目详情失败")
+  }
+})
+
 // 项目访问路由 - 直接处理项目内容
 app.get("/projects/:slug", async (c) => {
   try {
@@ -207,6 +232,102 @@ app.patch("/api/projects/:slug/toggle", async (c) => {
     })
   } catch (error) {
     return handleError(c, error, "切换项目状态失败")
+  }
+})
+
+// 更新项目
+app.put("/api/projects/:slug", async (c) => {
+  try {
+    const slug = c.req.param("slug")
+    const project = await findProjectBySlug(slug)
+
+    if (!project) {
+      return c.json({ error: "项目不存在" }, 404)
+    }
+
+    const formData = await c.req.formData()
+    const projectName = formData.get("projectName") as string | null
+    const file = formData.get("file") as globalThis.File | null
+
+    // 至少需要提供一个更新字段
+    if (!projectName && !file) {
+      return c.json({ error: "至少需要提供项目名称或文件" }, 400)
+    }
+
+    // 更新项目名称
+    if (projectName) {
+      if (projectName.trim().length === 0) {
+        return c.json({ error: "项目名称不能为空" }, 400)
+      }
+
+      if (projectName.length > 50) {
+        return c.json({ error: "项目名称不能超过50个字符" }, 400)
+      }
+
+      await db
+        .update(schema.projects)
+        .set({ name: projectName.trim() })
+        .where(eq(schema.projects.slug, slug))
+    }
+
+    // 更新文件
+    if (file) {
+      // 文件类型和大小验证
+      if (!file.name.endsWith(".html")) {
+        return c.json({ error: "只支持HTML文件" }, 400)
+      }
+
+      const maxFileSize = 5 * 1024 * 1024 // 5MB
+      if (file.size > maxFileSize) {
+        return c.json({ error: "文件大小不能超过5MB" }, 400)
+      }
+
+      if (file.size === 0) {
+        return c.json({ error: "文件不能为空" }, 400)
+      }
+
+      // 更新入口文件名
+      await db
+        .update(schema.projects)
+        .set({ entryPoint: file.name })
+        .where(eq(schema.projects.slug, slug))
+
+      // 更新文件内容（更新第一个文件，或创建新文件）
+      const existingFiles = await db
+        .select()
+        .from(schema.files)
+        .where(eq(schema.files.projectId, project.id))
+        .limit(1)
+
+      const content = await file.text()
+      const filename = `file_${Date.now()}.html`
+
+      if (existingFiles.length > 0) {
+        // 更新现有文件
+        await db
+          .update(schema.files)
+          .set({
+            filename,
+            originalName: file.name,
+            content,
+            size: file.size,
+            uploadedAt: new Date().toISOString(),
+          })
+          .where(eq(schema.files.id, existingFiles[0].id))
+      } else {
+        // 创建新文件
+        await storeFile(file, project.id, filename)
+      }
+    }
+
+    // 返回更新后的项目信息
+    const updatedProject = await findProjectBySlug(slug)
+    return c.json({
+      message: "项目更新成功",
+      project: updatedProject,
+    })
+  } catch (error) {
+    return handleError(c, error, "更新项目失败")
   }
 })
 
