@@ -175,8 +175,8 @@ app.post("/api/upload", async (c) => {
       return c.json({ error: "项目名称不能为空" }, 400)
     }
 
-    if (projectName.length > 50) {
-      return c.json({ error: "项目名称不能超过50个字符" }, 400)
+    if (projectName.length > 20) {
+      return c.json({ error: "项目名称不能超过20个字符" }, 400)
     }
 
     // 文件类型和大小验证
