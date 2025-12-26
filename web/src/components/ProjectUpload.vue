@@ -85,7 +85,7 @@ const resetForm = () => {
 
 <template>
   <div class="upload-section">
-    <h2>🚀 在港口即将出发</h2>
+    <h2>🚀 立即出发</h2>
     <p class="description">上传HTML文件，立即获得在线访问链接。</p>
 
     <div class="project-form">
