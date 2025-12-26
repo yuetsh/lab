@@ -97,10 +97,10 @@ const resetForm = () => {
           id="projectName"
           placeholder="请输入项目名称"
           class="form-input"
-          maxlength="50"
+          maxlength="20"
           :disabled="isUploading"
         />
-        <small class="input-hint">最多50个字符</small>
+        <small class="input-hint">最多20个字符</small>
       </div>
 
       <div class="file-upload">
