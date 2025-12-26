@@ -1,4 +1,4 @@
-import type { Project, UploadResponse, ToggleResponse } from "../types"
+import type { Project, UploadResponse, ToggleResponse, ProjectDetail, UpdateProjectResponse } from "../types"
 
 const getApiBase = () => {
   if (window.location.hostname !== 'localhost') {
@@ -56,6 +56,25 @@ export const api = {
     request<ToggleResponse>(`/projects/${slug}/toggle`, {
       method: "PATCH",
     }),
+
+  // 获取项目详情
+  getProjectDetail: (slug: string): Promise<ProjectDetail> =>
+    request<ProjectDetail>(`/projects/${slug}`),
+
+  // 更新项目
+  updateProject: (slug: string, formData: FormData): Promise<UpdateProjectResponse> => {
+    const API_BASE = getApiBase()
+    return fetch(`${API_BASE}/projects/${slug}`, {
+      method: "PUT",
+      body: formData,
+    }).then(async (response) => {
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "请求失败")
+      }
+      return data
+    })
+  },
 
   // 删除项目
   deleteProject: (slug: string): Promise<{ message: string }> =>
