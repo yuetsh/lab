@@ -42,192 +42,308 @@ const handleProjectUpdated = () => {
 </script>
 
 <template>
-  <div class="projects-section">
-    <div class="projects-header">
-      <h2>📋 我的托管项目</h2>
-      <div class="search-container">
-        <div class="search-box">
+  <div class="list-card">
+    <div class="list-header">
+      <div class="list-title-group">
+        <div class="list-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="list-title">我的项目</h2>
+          <p class="list-subtitle">{{ projects.length }} 个项目</p>
+        </div>
+      </div>
+
+      <div class="search-box">
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
           <input
             v-model="searchInput"
-            type="text"
-            placeholder="搜索项目名称..."
+            type="search"
+            placeholder="搜索项目..."
             class="search-input"
             @input="handleSearchInput"
             @keyup.enter="handleSearch"
+            aria-label="搜索项目"
           />
-          <button
-            @click="handleSearch"
-            class="search-button"
-            :disabled="!searchInput.trim()"
-          >
-            🔍 搜索
-          </button>
-          <button
-            v-if="searchQuery"
-            @click="handleClearSearch"
-            class="clear-search-button"
-          >
-            ✕ 清除
-          </button>
         </div>
+        <button
+          @click="handleSearch"
+          class="search-btn"
+          :disabled="!searchInput.trim()"
+        >
+          搜索
+        </button>
+        <button
+          v-if="searchQuery"
+          @click="handleClearSearch"
+          class="clear-btn"
+          aria-label="清除搜索"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+          清除
+        </button>
       </div>
     </div>
-    
-    <div v-if="searchQuery" class="search-results-info">
-      <p>搜索 "{{ searchQuery }}" 的结果 ({{ projects.length }} 个项目)</p>
+
+    <div v-if="searchQuery" class="search-results-banner">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      搜索 "<strong>{{ searchQuery }}</strong>" — 找到 {{ projects.length }} 个结果
     </div>
-    
-    <div v-if="projects.length === 0" class="empty-state">
-      <p v-if="searchQuery">没有找到匹配的项目，请尝试其他搜索词。</p>
-      <p v-else>还没有托管任何项目，上传一个HTML文件开始吧！</p>
-    </div>
-    
-    <div v-else class="projects-grid">
-      <ProjectCard
-        v-for="project in projects"
-        :key="project.id"
-        :project="project"
-        :api-base="apiBase"
-        @project-updated="handleProjectUpdated"
-      />
+
+    <div class="list-body">
+      <div v-if="projects.length === 0" class="empty-state">
+        <div class="empty-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <p class="empty-title">
+          {{ searchQuery ? "没有找到匹配的项目" : "还没有项目" }}
+        </p>
+        <p class="empty-hint">
+          {{ searchQuery ? "试试其他关键词" : "上传一个HTML文件开始使用吧" }}
+        </p>
+      </div>
+
+      <div v-else class="projects-grid">
+        <ProjectCard
+          v-for="project in projects"
+          :key="project.id"
+          :project="project"
+          :api-base="apiBase"
+          @project-updated="handleProjectUpdated"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.projects-section {
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+.list-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
-.projects-header {
+.list-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  gap: 20px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
 }
 
-.projects-header h2 {
+.list-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.list-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-gray-100);
+  color: var(--color-gray-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.list-title {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.list-subtitle {
   margin: 0;
-  color: #333;
-  font-size: 1.5em;
-}
-
-.search-container {
-  flex: 1;
-  max-width: 400px;
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 .search-box {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 8px;
+}
+
+.search-input-wrap {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-gray-400);
+  pointer-events: none;
 }
 
 .search-input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border-color 0.3s ease;
+  padding: 8px 12px 8px 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  outline: none;
+  width: 220px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .search-input:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.search-button,
-.clear-search-button {
-  padding: 8px 12px;
+.search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-btn {
+  padding: 8px 14px;
+  background: var(--color-primary);
+  color: white;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  border-radius: var(--radius-md);
   font-size: 13px;
   font-weight: 500;
-  transition: all 0.3s ease;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  white-space: nowrap;
 }
 
-.search-button {
-  background: #667eea;
-  color: white;
+.search-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
 }
 
-.search-button:hover:not(:disabled) {
-  background: #5a6fd8;
-  transform: translateY(-1px);
-}
-
-.search-button:disabled {
-  background: #ccc;
+.search-btn:disabled {
+  background: var(--color-gray-200);
+  color: var(--color-gray-400);
   cursor: not-allowed;
-  transform: none;
 }
 
-.clear-search-button {
-  background: #dc3545;
-  color: white;
+.clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  background: var(--color-gray-100);
+  color: var(--color-gray-600);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  white-space: nowrap;
 }
 
-.clear-search-button:hover {
-  background: #c82333;
-  transform: translateY(-1px);
+.clear-btn:hover {
+  background: var(--color-gray-200);
+  color: var(--color-text);
 }
 
-.search-results-info {
-  margin-bottom: 15px;
-  padding: 10px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border-left: 4px solid #667eea;
+.search-results-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  font-size: 13px;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border-bottom: 1px solid var(--color-primary-border);
 }
 
-.search-results-info p {
-  margin: 0;
-  color: #666;
-  font-size: 14px;
+.list-body {
+  padding: 24px;
 }
 
 .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
   text-align: center;
-  padding: 60px 20px;
-  color: #666;
-  font-size: 1.1em;
+}
+
+.empty-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-xl);
+  background: var(--color-gray-100);
+  color: var(--color-gray-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.empty-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.empty-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
 }
 
 .projects-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 
-/* 响应式设计：小屏幕时切换为单列 */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .projects-grid {
     grid-template-columns: 1fr;
   }
-  
-  .projects-header {
+}
+
+@media (max-width: 640px) {
+  .list-header {
+    padding: 16px;
     flex-direction: column;
     align-items: stretch;
-    gap: 15px;
   }
-  
-  .search-container {
-    max-width: none;
-  }
-  
+
   .search-box {
     flex-wrap: wrap;
   }
-  
+
   .search-input {
-    min-width: 200px;
+    width: 100%;
+  }
+
+  .list-body {
+    padding: 16px;
   }
 }
 </style>

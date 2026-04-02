@@ -19,7 +19,6 @@ const emit = defineEmits<Emits>()
 
 const { showMessage } = useMessage()
 
-// 编辑相关状态
 const isEditing = ref(false)
 const isLoading = ref(false)
 const editProjectName = ref("")
@@ -50,7 +49,6 @@ const toggleProjectStatus = async (projectSlug: string) => {
       error instanceof Error ? error.message : "状态切换失败，请检查网络连接",
       "error"
     )
-    console.error("状态切换失败:", error)
   }
 }
 
@@ -68,32 +66,24 @@ const deleteProject = async (projectSlug: string, projectName: string) => {
       error instanceof Error ? error.message : "删除失败，请检查网络连接",
       "error"
     )
-    console.error("删除失败:", error)
   }
 }
 
-// 打开编辑对话框
 const openEditDialog = async (projectSlug: string) => {
   isEditing.value = true
   editProjectName.value = props.project.name
-  
+
   try {
-    // 获取项目详情（包括文件内容）
     projectDetail.value = await api.getProjectDetail(projectSlug)
-    if (projectDetail.value.files.length > 0) {
-      // 可以在这里预填充文件内容，如果需要的话
-    }
   } catch (error) {
     showMessage(
       error instanceof Error ? error.message : "获取项目详情失败",
       "error"
     )
-    console.error("获取项目详情失败:", error)
     isEditing.value = false
   }
 }
 
-// 关闭编辑对话框
 const closeEditDialog = () => {
   isEditing.value = false
   editProjectName.value = ""
@@ -105,47 +95,36 @@ const closeEditDialog = () => {
   }
 }
 
-// 验证文件
 const validateFile = (file: File): boolean => {
-  // 文件类型验证
   if (!file.name.endsWith(".html")) {
     showMessage("请选择HTML文件", "error")
     return false
   }
-  
-  // 文件大小验证 (5MB)
   const maxSize = 5 * 1024 * 1024
   if (file.size > maxSize) {
     showMessage("文件大小不能超过5MB", "error")
     return false
   }
-  
   if (file.size === 0) {
     showMessage("文件不能为空", "error")
     return false
   }
-  
   return true
 }
 
-// 处理文件选择
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (!file) return
-  
+
   if (validateFile(file)) {
     selectedFile.value = file
   } else {
-    // 验证失败，清空选择
-    if (editFileInput.value) {
-      editFileInput.value.value = ""
-    }
+    if (editFileInput.value) editFileInput.value.value = ""
     selectedFile.value = null
   }
 }
 
-// 处理拖拽
 const handleDragOver = (event: DragEvent) => {
   event.preventDefault()
   isDragging.value = true
@@ -158,13 +137,12 @@ const handleDragLeave = () => {
 const handleDrop = (event: DragEvent) => {
   event.preventDefault()
   isDragging.value = false
-  
+
   const file = event.dataTransfer?.files?.[0]
   if (!file) return
-  
+
   if (validateFile(file)) {
     selectedFile.value = file
-    // 同步到input元素
     if (editFileInput.value) {
       const dataTransfer = new DataTransfer()
       dataTransfer.items.add(file)
@@ -173,38 +151,31 @@ const handleDrop = (event: DragEvent) => {
   }
 }
 
-// 清除选择的文件
 const clearSelectedFile = () => {
   selectedFile.value = null
-  if (editFileInput.value) {
-    editFileInput.value.value = ""
-  }
+  if (editFileInput.value) editFileInput.value.value = ""
 }
 
-// 格式化文件大小
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return "0 B"
   const k = 1024
   const sizes = ["B", "KB", "MB", "GB"]
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i]
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i]
 }
 
-// 保存编辑
 const saveEdit = async () => {
   if (!editProjectName.value.trim()) {
     showMessage("请输入项目名称", "error")
     return
   }
-  
   if (editProjectName.value.length > 50) {
     showMessage("项目名称不能超过50个字符", "error")
     return
   }
 
   const file = selectedFile.value
-  
-  // 至少需要修改名称或文件
+
   if (editProjectName.value === props.project.name && !file) {
     showMessage("请至少修改项目名称或上传新文件", "error")
     return
@@ -214,13 +185,10 @@ const saveEdit = async () => {
 
   try {
     const formData = new FormData()
-    
-    // 只有当名称改变时才添加
+
     if (editProjectName.value !== props.project.name) {
       formData.append("projectName", editProjectName.value)
     }
-    
-    // 如果选择了新文件，添加文件
     if (file) {
       formData.append("file", file)
     }
@@ -234,7 +202,6 @@ const saveEdit = async () => {
       error instanceof Error ? error.message : "更新失败，请检查网络连接",
       "error"
     )
-    console.error("更新失败:", error)
   } finally {
     isLoading.value = false
   }
@@ -242,744 +209,659 @@ const saveEdit = async () => {
 </script>
 
 <template>
-  <div class="project-card">
-    <div class="project-info">
-      <div class="project-header">
-        <h3 class="project-name">{{ props.project.name }}</h3>
-        <div class="project-badges">
-          <span class="project-type-badge"> 📄 HTML文件 </span>
-          <span
-            class="status-badge"
-            :class="{
-              active: props.project.isActive,
-              inactive: !props.project.isActive,
-            }"
-          >
-            {{ props.project.isActive ? "🟢 激活" : "🔴 停用" }}
-          </span>
+  <div class="card">
+    <!-- Header row -->
+    <div class="card-header">
+      <div class="card-name-row">
+        <div class="file-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          HTML
         </div>
+        <h3 class="card-name" :title="props.project.name">{{ props.project.name }}</h3>
       </div>
-      <div class="project-details">
-        <div class="detail-item">
-          <span class="label">入口文件:</span>
-          <span class="value">{{ props.project.entryPoint }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">创建时间:</span>
-          <span class="value">{{ formatDate(props.project.uploadedAt) }}</span>
-        </div>
-      </div>
-      <div class="project-actions">
-        <div class="actions-container">
-          <!-- 主要操作 -->
-          <div class="action-section primary-section">
-            <a
-              v-if="props.project.isActive"
-              :href="getProjectUrl(props.project, props.apiBase)"
-              target="_blank"
-              class="action-btn visit-btn"
-              title="访问项目"
-            >
-              <span class="btn-icon">🌐</span>
-              <span class="btn-text">访问</span>
-            </a>
-            <button
-              v-if="props.project.isActive"
-              @click="copyUrl(getProjectUrl(props.project, props.apiBase))"
-              class="action-btn copy-btn"
-              title="复制链接"
-            >
-              <span class="btn-icon">📋</span>
-              <span class="btn-text">复制</span>
-            </button>
-          </div>
+      <span class="status-badge" :class="props.project.isActive ? 'status-badge--active' : 'status-badge--inactive'">
+        <span class="status-dot"></span>
+        {{ props.project.isActive ? "激活" : "停用" }}
+      </span>
+    </div>
 
-          <!-- 分隔符 -->
-          <div v-if="props.project.isActive" class="action-divider"></div>
-
-          <!-- 管理操作 -->
-          <div class="action-section management-section">
-            <button
-              @click="openEditDialog(props.project.slug)"
-              class="action-btn edit-btn"
-              title="编辑项目"
-            >
-              <span class="btn-icon">✏️</span>
-              <span class="btn-text">编辑</span>
-            </button>
-            <button
-              @click="toggleProjectStatus(props.project.slug)"
-              :class="[
-                'action-btn',
-                props.project.isActive ? 'deactivate-btn' : 'activate-btn'
-              ]"
-              :title="props.project.isActive ? '停用项目' : '激活项目'"
-            >
-              <span class="btn-icon">{{ props.project.isActive ? "⏸️" : "▶️" }}</span>
-              <span class="btn-text">{{ props.project.isActive ? "停用" : "激活" }}</span>
-            </button>
-            <button
-              @click="deleteProject(props.project.slug, props.project.name)"
-              class="action-btn delete-btn"
-              title="删除项目"
-            >
-              <span class="btn-icon">🗑️</span>
-              <span class="btn-text">删除</span>
-            </button>
-          </div>
-        </div>
+    <!-- Meta -->
+    <div class="card-meta">
+      <div class="meta-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+          <polyline points="13 2 13 9 20 9"/>
+        </svg>
+        <span>{{ props.project.entryPoint }}</span>
       </div>
+      <div class="meta-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span>{{ formatDate(props.project.uploadedAt) }}</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card-actions">
+      <!-- Primary actions -->
+      <template v-if="props.project.isActive">
+        <a
+          :href="getProjectUrl(props.project, props.apiBase)"
+          target="_blank"
+          class="btn btn--primary"
+          title="在新标签页打开项目"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          访问
+        </a>
+        <button
+          @click="copyUrl(getProjectUrl(props.project, props.apiBase))"
+          class="btn btn--ghost"
+          title="复制访问链接"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          复制链接
+        </button>
+      </template>
+
+      <div class="actions-spacer"></div>
+
+      <!-- Management actions -->
+      <button
+        @click="openEditDialog(props.project.slug)"
+        class="btn btn--ghost"
+        title="编辑项目"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        编辑
+      </button>
+      <button
+        @click="toggleProjectStatus(props.project.slug)"
+        class="btn btn--ghost"
+        :title="props.project.isActive ? '停用项目' : '激活项目'"
+      >
+        <svg v-if="props.project.isActive" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="6" y="4" width="4" height="16"/>
+          <rect x="14" y="4" width="4" height="16"/>
+        </svg>
+        <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        {{ props.project.isActive ? "停用" : "激活" }}
+      </button>
+      <button
+        @click="deleteProject(props.project.slug, props.project.name)"
+        class="btn btn--danger"
+        title="删除项目"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/>
+          <path d="M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+        删除
+      </button>
     </div>
   </div>
 
-  <!-- 编辑对话框 -->
-  <div v-if="isEditing" class="edit-modal-overlay" @click="closeEditDialog">
-    <div class="edit-modal" @click.stop>
-      <div class="edit-modal-header">
-        <h3>编辑项目</h3>
-        <button @click="closeEditDialog" class="close-button">✕</button>
-      </div>
-      
-      <div class="edit-modal-body">
-        <div class="form-group">
-          <label for="editProjectName">项目名称:</label>
-          <input
-            v-model="editProjectName"
-            type="text"
-            id="editProjectName"
-            placeholder="请输入项目名称"
-            class="form-input"
-            maxlength="50"
-            :disabled="isLoading"
-          />
-          <small class="input-hint">最多50个字符</small>
+  <!-- Edit Modal -->
+  <Teleport to="body">
+    <div v-if="isEditing" class="modal-overlay" @click="closeEditDialog" role="dialog" aria-modal="true" aria-label="编辑项目">
+      <div class="modal" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">编辑项目</h3>
+          <button @click="closeEditDialog" class="modal-close" aria-label="关闭">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
 
-        <div class="form-group">
-          <label>更新HTML文件 (可选):</label>
-          
-          <!-- 文件上传区域 -->
-          <div
-            class="file-upload-area"
-            :class="{ 'dragging': isDragging, 'has-file': selectedFile }"
-            @dragover.prevent="handleDragOver"
-            @dragleave="handleDragLeave"
-            @drop="handleDrop"
-            @click="editFileInput?.click()"
-          >
+        <div class="modal-body">
+          <div class="form-field">
+            <label class="field-label" for="editProjectName">项目名称</label>
             <input
-              ref="editFileInput"
-              type="file"
-              accept=".html"
-              @change="handleFileSelect"
+              v-model="editProjectName"
+              type="text"
+              id="editProjectName"
+              placeholder="请输入项目名称"
+              class="field-input"
+              maxlength="50"
               :disabled="isLoading"
-              class="file-input-hidden"
             />
-            
-            <div v-if="!selectedFile" class="upload-placeholder">
-              <div class="upload-icon">📄</div>
-              <div class="upload-text">
-                <span class="upload-main-text">点击选择或拖拽HTML文件到此处</span>
-                <span class="upload-hint">支持 .html 文件，最大 5MB</span>
-              </div>
-            </div>
-            
-            <div v-else class="file-preview">
-              <div class="file-info">
-                <div class="file-icon">📄</div>
-                <div class="file-details">
-                  <div class="file-name">{{ selectedFile.name }}</div>
-                  <div class="file-size">{{ formatFileSize(selectedFile.size) }}</div>
-                </div>
-              </div>
-              <button
-                type="button"
-                @click.stop="clearSelectedFile"
-                class="remove-file-btn"
-                :disabled="isLoading"
-                title="移除文件"
-              >
-                ✕
-              </button>
-            </div>
+            <span class="field-hint">最多50个字符</span>
           </div>
-          
-          <small class="input-hint">如果不选择文件，将保持原有文件不变</small>
+
+          <div class="form-field">
+            <label class="field-label">更新HTML文件 <span class="field-optional">（可选）</span></label>
+
+            <div
+              class="drop-zone"
+              :class="{ 'drop-zone--dragging': isDragging, 'drop-zone--has-file': selectedFile, 'drop-zone--disabled': isLoading }"
+              @dragover="handleDragOver"
+              @dragleave="handleDragLeave"
+              @drop="handleDrop"
+              @click="!selectedFile && editFileInput?.click()"
+            >
+              <input
+                ref="editFileInput"
+                type="file"
+                accept=".html"
+                @change="handleFileSelect"
+                :disabled="isLoading"
+                style="display: none"
+              />
+
+              <div v-if="!selectedFile" class="drop-placeholder">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="12" y1="18" x2="12" y2="12"/>
+                  <line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
+                <span class="drop-text">点击选择或拖拽HTML文件</span>
+                <span class="drop-hint">.html · 最大 5MB</span>
+              </div>
+
+              <div v-else class="file-preview">
+                <div class="file-preview-info">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <div class="file-preview-text">
+                    <span class="file-preview-name">{{ selectedFile.name }}</span>
+                    <span class="file-preview-size">{{ formatFileSize(selectedFile.size) }}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  @click.stop="clearSelectedFile"
+                  class="file-remove-btn"
+                  :disabled="isLoading"
+                  aria-label="移除文件"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <span class="field-hint">不选择文件则保持原有文件不变</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button @click="closeEditDialog" class="btn btn--ghost" :disabled="isLoading">
+            取消
+          </button>
+          <button @click="saveEdit" class="btn btn--primary" :disabled="isLoading">
+            <svg v-if="isLoading" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            {{ isLoading ? "保存中..." : "保存更改" }}
+          </button>
         </div>
       </div>
-
-      <div class="edit-modal-footer">
-        <button
-          @click="closeEditDialog"
-          class="cancel-button"
-          :disabled="isLoading"
-        >
-          取消
-        </button>
-        <button
-          @click="saveEdit"
-          class="save-button"
-          :disabled="isLoading"
-        >
-          {{ isLoading ? "保存中..." : "保存" }}
-        </button>
-      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
-.project-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  background: #fafafa;
-  transition: all 0.3s ease;
-}
-
-.project-card:hover {
-  border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-  transform: translateY(-2px);
-}
-
-.project-info {
+/* Card */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 14px;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
 }
 
-.project-header {
+.card:hover {
+  border-color: var(--color-primary-border);
+  box-shadow: var(--shadow-md);
+}
+
+/* Header */
+.card-header {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
   gap: 10px;
 }
 
-.project-badges {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.project-name {
-  margin: 0;
-  color: #333;
-  font-size: 1.2em;
-}
-
-.project-type-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.8em;
-  font-weight: 500;
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.status-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.8em;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.status-badge.active {
-  background: #e8f5e8;
-  color: #2e7d32;
-}
-
-.status-badge.inactive {
-  background: #ffebee;
-  color: #c62828;
-}
-
-.project-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9em;
-}
-
-.label {
-  color: #666;
-  font-weight: 500;
-}
-
-.value {
-  color: #333;
-  font-weight: 400;
-}
-
-.project-actions {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #e8e8e8;
-}
-
-.actions-container {
+.card-name-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.action-section {
-  display: flex;
   gap: 8px;
-  align-items: center;
+  min-width: 0;
+  flex: 1;
 }
 
-.action-divider {
-  width: 1px;
-  height: 24px;
-  background: #ddd;
-  flex-shrink: 0;
-}
-
-.action-btn {
+.file-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 13px;
-  transition: all 0.2s ease;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.action-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.btn-icon {
-  font-size: 14px;
-  line-height: 1;
-}
-
-.btn-text {
-  font-size: 13px;
-}
-
-/* 主要操作按钮 */
-.visit-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.visit-btn:hover {
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.copy-btn {
-  background: #6c757d;
-  color: white;
-}
-
-.copy-btn:hover {
-  background: #5a6268;
-}
-
-/* 管理操作按钮 */
-.edit-btn {
-  background: #17a2b8;
-  color: white;
-}
-
-.edit-btn:hover {
-  background: #138496;
-  box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
-}
-
-.activate-btn {
-  background: #28a745;
-  color: white;
-}
-
-.activate-btn:hover {
-  background: #218838;
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-}
-
-.deactivate-btn {
-  background: #ffc107;
-  color: #212529;
-}
-
-.deactivate-btn:hover {
-  background: #e0a800;
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
-}
-
-.delete-btn {
-  background: #dc3545;
-  color: white;
-}
-
-.delete-btn:hover {
-  background: #c82333;
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
-}
-
-.activate-button {
-  background: #28a745;
-}
-
-.activate-button:hover {
-  background: #218838;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-}
-
-.deactivate-button {
-  background: #ffc107;
-  color: #212529;
-}
-
-.deactivate-button:hover {
-  background: #e0a800;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
-}
-
-/* 编辑对话框样式 */
-.edit-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.edit-modal {
-  background: white;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.edit-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.edit-modal-header h3 {
-  margin: 0;
-  color: #333;
-  font-size: 1.3em;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #666;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-}
-
-.close-button:hover {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.edit-modal-body {
-  padding: 20px;
-}
-
-.edit-modal-body .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.edit-modal-body .form-group label {
-  font-weight: 500;
-  color: #555;
-}
-
-.edit-modal-body .form-input {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 14px;
-  transition: border-color 0.3s ease;
-}
-
-.edit-modal-body .form-input:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
-}
-
-.edit-modal-body .form-input:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
-/* 文件上传区域 */
-.file-upload-area {
-  position: relative;
-  border: 2px dashed #ddd;
-  border-radius: 8px;
-  padding: 24px;
-  background: #fafafa;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  min-height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.file-upload-area:hover {
-  border-color: #667eea;
-  background: #f5f7ff;
-}
-
-.file-upload-area.dragging {
-  border-color: #667eea;
-  background: #eef2ff;
-  transform: scale(1.02);
-}
-
-.file-upload-area.has-file {
-  border-color: #28a745;
-  background: #f0f9f4;
-  cursor: default;
-}
-
-.file-input-hidden {
-  position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.upload-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  text-align: center;
-}
-
-.upload-icon {
-  font-size: 48px;
-  opacity: 0.6;
-}
-
-.upload-text {
-  display: flex;
-  flex-direction: column;
   gap: 4px;
-}
-
-.upload-main-text {
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
-}
-
-.upload-hint {
-  font-size: 12px;
-  color: #999;
-}
-
-.file-preview {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px;
-  background: white;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.file-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
-.file-icon {
-  font-size: 32px;
+  padding: 2px 7px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   flex-shrink: 0;
 }
 
-.file-details {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.file-name {
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
+.card-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.file-size {
+/* Status badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
   font-size: 12px;
-  color: #666;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
-.remove-file-btn {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: #dc3545;
-  color: white;
+.status-badge--active {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.status-badge--inactive {
+  background: var(--color-gray-100);
+  color: var(--color-gray-500);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  cursor: pointer;
-  font-size: 16px;
+  background: currentColor;
+}
+
+/* Meta */
+.card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.meta-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  padding: 0;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
-.remove-file-btn:hover:not(:disabled) {
-  background: #c82333;
-  transform: scale(1.1);
+.meta-item svg {
+  flex-shrink: 0;
+  color: var(--color-gray-400);
 }
 
-.remove-file-btn:disabled {
+/* Action buttons */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-border);
+}
+
+.actions-spacer {
+  flex: 1;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  min-height: 32px;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.btn--primary:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-gray-600);
+  border-color: var(--color-border);
+}
+
+.btn--ghost:hover {
+  background: var(--color-gray-50);
+  border-color: var(--color-gray-300);
+  color: var(--color-text);
+}
+
+.btn--danger {
+  background: transparent;
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+}
+
+.btn--danger:hover {
+  background: var(--color-danger-light);
+  border-color: var(--color-danger);
+}
+
+.btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.edit-modal-body .input-hint {
-  color: #666;
-  font-size: 12px;
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 16px;
+  backdrop-filter: blur(2px);
 }
 
-.edit-modal-footer {
+.modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-gray-400);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.modal-close:hover {
+  background: var(--color-gray-100);
+  color: var(--color-text);
+}
+
+.modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 20px;
-  border-top: 1px solid #e0e0e0;
+  gap: 8px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border);
 }
 
-.cancel-button,
-.save-button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+/* Form */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 13px;
   font-weight: 500;
+  color: var(--color-gray-700);
+}
+
+.field-optional {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.field-input {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 14px;
-  transition: all 0.3s ease;
+  color: var(--color-text);
+  background: var(--color-surface);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.cancel-button {
-  background: #6c757d;
-  color: white;
+.field-input:focus {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.cancel-button:hover:not(:disabled) {
-  background: #5a6268;
-  transform: translateY(-1px);
+.field-input:disabled {
+  background: var(--color-gray-50);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
 }
 
-.save-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.field-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
-.save-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  cursor: pointer;
+  transition: border-color var(--transition-base), background var(--transition-base);
+  text-align: center;
 }
 
-.cancel-button:disabled,
-.save-button:disabled {
+.drop-zone:hover:not(.drop-zone--disabled):not(.drop-zone--has-file) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.drop-zone--dragging {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.drop-zone--has-file {
+  border-color: var(--color-success-border);
+  background: var(--color-success-light);
+  cursor: default;
+  text-align: left;
+}
+
+.drop-zone--disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
-/* 手机端响应式设计 */
-@media (max-width: 768px) {
-  .actions-container {
+.drop-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-gray-400);
+}
+
+.drop-zone:hover:not(.drop-zone--disabled) .drop-placeholder,
+.drop-zone--dragging .drop-placeholder {
+  color: var(--color-primary);
+}
+
+.drop-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.drop-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.file-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.file-preview-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  color: var(--color-success);
+}
+
+.file-preview-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.file-preview-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-preview-size {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.file-remove-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-danger-border);
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.file-remove-btn:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: white;
+}
+
+.file-remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .card-actions {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
   }
 
-  .action-section {
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .action-divider {
+  .actions-spacer {
     display: none;
   }
 
-  .action-btn {
-    flex: 1;
-    min-width: 0;
+  .btn {
     justify-content: center;
-    padding: 8px 10px;
-    font-size: 12px;
-  }
-
-  .btn-text {
-    font-size: 12px;
-  }
-
-  .edit-modal {
-    width: 95%;
-    margin: 10px;
-  }
-
-  .edit-modal-header,
-  .edit-modal-body,
-  .edit-modal-footer {
-    padding: 15px;
+    min-height: 40px;
   }
 }
 </style>
