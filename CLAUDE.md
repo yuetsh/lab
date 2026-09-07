@@ -24,7 +24,8 @@ bun run start        # Run production build
 cd web
 bun install          # Install dependencies
 bun run dev          # Vite dev server
-bun run build        # Type-check + build to web/dist/
+bun run build        # Build to web/dist/ (no type-check)
+bun run type-check   # vue-tsc type-check (needs Node, not run in Docker)
 bun run preview      # Preview production build
 ```
 
@@ -36,7 +37,9 @@ docker compose up -d --build   # Build both images and start the stack
 
 No host-side build step is needed: `web/Dockerfile` is a multi-stage build (Bun compiles the
 frontend, then the `dist/` output is copied into a `caddy:alpine` image), and `server/Dockerfile`
-runs `bun run build` inside the image. `Caddyfile` is still bind-mounted, so editing it only needs
+runs `bun run build` inside the image. The Docker build runs `vite build` only — `vue-tsc` needs a
+real Node runtime (it fails under Bun with TS2307), so type errors are **not** caught at deploy
+time; run `bun run type-check` on the host. `Caddyfile` is still bind-mounted, so editing it only needs
 a `docker compose restart caddy`.
 
 The Docker setup exposes port 8089 on the host, mapping to Caddy on port 80.

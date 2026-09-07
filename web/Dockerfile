@@ -3,9 +3,6 @@ FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
-# vue-tsc 需要在 Node 下运行才能解析 .vue 模块，bun 运行时会报 TS2307
-RUN apk add --no-cache nodejs
-
 # 先复制依赖清单，让依赖层可以命中缓存
 COPY package.json bun.lock bunfig.toml ./
 RUN bun install --frozen-lockfile
