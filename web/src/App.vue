@@ -32,7 +32,7 @@ onMounted(() => {
             <path d="M2 17l10 5 10-5"/>
             <path d="M2 12l10 5 10-5"/>
           </svg>
-          <span class="brand-name">港湾</span>
+          <span class="brand-name">Lab</span>
         </div>
         <p class="brand-tagline">自托管 HTML 项目发布平台</p>
       </div>
