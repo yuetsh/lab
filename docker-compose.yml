@@ -1,0 +1,23 @@
+services:
+  server:
+    build: ./server
+    container_name: lab-server
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - lab-data:/app/data
+    restart: unless-stopped
+
+  caddy:
+    build: ./web
+    container_name: lab-web
+    ports:
+      - 8089:80
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  lab-data:

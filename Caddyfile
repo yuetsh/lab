@@ -1,0 +1,17 @@
+:80 {
+    encode gzip
+    
+    handle /api/* {
+        reverse_proxy lab-server:3000
+    }
+    
+    handle /projects/* {
+        reverse_proxy lab-server:3000
+    }
+    
+    handle {
+        root * /usr/share/caddy
+        file_server
+        try_files {path} /index.html
+    }
+}
