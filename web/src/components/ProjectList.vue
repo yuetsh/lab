@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { onUnmounted, ref } from "vue"
 import ProjectCard from "./ProjectCard.vue"
 import type { Project } from "../types"
 
@@ -20,21 +20,43 @@ const emit = defineEmits<Emits>()
 
 const searchInput = ref("")
 
+// 输入防抖：每敲一个字就发一次请求太浪费，300ms 后再发
+const SEARCH_DEBOUNCE_MS = 300
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+const cancelPendingSearch = () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = null
+  }
+}
+
+// 点按钮或回车：立即搜，并取消待执行的那次
 const handleSearch = () => {
+  cancelPendingSearch()
   emit("search", searchInput.value.trim())
 }
 
 const handleClearSearch = () => {
+  cancelPendingSearch()
   searchInput.value = ""
   emit("clear-search")
 }
 
-const handleSearchInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.value.trim() === "") {
-    emit("clear-search")
-  }
+const handleSearchInput = () => {
+  cancelPendingSearch()
+  searchTimer = setTimeout(() => {
+    searchTimer = null
+    const query = searchInput.value.trim()
+    if (query === "") {
+      emit("clear-search")
+    } else {
+      emit("search", query)
+    }
+  }, SEARCH_DEBOUNCE_MS)
 }
+
+onUnmounted(cancelPendingSearch)
 
 const handleProjectUpdated = () => {
   emit("project-updated")

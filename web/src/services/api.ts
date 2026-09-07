@@ -1,6 +1,7 @@
 import type { Project, UploadResponse, ToggleResponse, ProjectDetail, UpdateProjectResponse } from "../types"
 
-const getApiBase = () => {
+// 同时被 App.vue 复用，避免两份相同实现
+export const getApiBase = () => {
   if (window.location.hostname !== 'localhost') {
     return `${window.location.protocol}//${window.location.host}/api`
   }
@@ -12,11 +13,13 @@ const getApiBase = () => {
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const API_BASE = getApiBase()
   const response = await fetch(`${API_BASE}${url}`, {
+    // options 必须先展开：放在后面会把整个 headers 键覆盖掉，
+    // 上面的合并就成了摆设
+    ...options,
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
     },
-    ...options,
   })
 
   const data = await response.json()

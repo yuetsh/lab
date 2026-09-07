@@ -3,17 +3,11 @@ import { onMounted } from "vue"
 import ProjectUpload from "./components/ProjectUpload.vue"
 import ProjectList from "./components/ProjectList.vue"
 import { useProjects } from "./composables/useProjects"
+import { getApiBase } from "./services/api"
 import { useGlobalMessage } from "./composables/useGlobalMessage"
 
 const { projects, fetchProjects, searchProjects, clearSearch, searchQuery } = useProjects()
 const { message, messageType } = useGlobalMessage()
-
-function getApiBase() {
-  if (window.location.hostname !== "localhost") {
-    return `${window.location.protocol}//${window.location.host}/api`
-  }
-  return "http://localhost:3000/api"
-}
 
 const handleProjectUpdated = () => {
   fetchProjects()

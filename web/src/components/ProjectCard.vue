@@ -3,7 +3,7 @@ import { ref } from "vue"
 import { api } from "../services/api"
 import { formatDate, getProjectUrl, copyToClipboard } from "../utils"
 import { useGlobalMessage } from "../composables/useGlobalMessage"
-import type { Project, ProjectDetail } from "../types"
+import type { Project } from "../types"
 
 interface Props {
   project: Project
@@ -23,7 +23,6 @@ const isEditing = ref(false)
 const isLoading = ref(false)
 const editProjectName = ref("")
 const editFileInput = ref<HTMLInputElement>()
-const projectDetail = ref<ProjectDetail | null>(null)
 const selectedFile = ref<File | null>(null)
 const isDragging = ref(false)
 
@@ -69,25 +68,16 @@ const deleteProject = async (projectSlug: string, projectName: string) => {
   }
 }
 
-const openEditDialog = async (projectSlug: string) => {
-  isEditing.value = true
+// 编辑框只需要项目名和新选的文件，列表里已有的数据就够了。
+// 原先会拉一次 /api/projects/:slug（含完整 HTML，最大 5MB）却从不使用。
+const openEditDialog = () => {
   editProjectName.value = props.project.name
-
-  try {
-    projectDetail.value = await api.getProjectDetail(projectSlug)
-  } catch (error) {
-    showMessage(
-      error instanceof Error ? error.message : "获取项目详情失败",
-      "error"
-    )
-    isEditing.value = false
-  }
+  isEditing.value = true
 }
 
 const closeEditDialog = () => {
   isEditing.value = false
   editProjectName.value = ""
-  projectDetail.value = null
   selectedFile.value = null
   isDragging.value = false
   if (editFileInput.value) {
@@ -282,7 +272,7 @@ const saveEdit = async () => {
 
       <!-- Management actions -->
       <button
-        @click="openEditDialog(props.project.slug)"
+        @click="openEditDialog()"
         class="btn btn--ghost"
         title="编辑项目"
       >
