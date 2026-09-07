@@ -2,6 +2,10 @@
     encode gzip
     
     handle /api/* {
+        # 上传接口在读完整个 body 之后才校验 5MB 上限，这里先挡一道
+        request_body {
+            max_size 6MB
+        }
         reverse_proxy lab-server:3000
     }
     

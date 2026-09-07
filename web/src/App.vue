@@ -3,8 +3,10 @@ import { onMounted } from "vue"
 import ProjectUpload from "./components/ProjectUpload.vue"
 import ProjectList from "./components/ProjectList.vue"
 import { useProjects } from "./composables/useProjects"
+import { useGlobalMessage } from "./composables/useGlobalMessage"
 
 const { projects, fetchProjects, searchProjects, clearSearch, searchQuery } = useProjects()
+const { message, messageType } = useGlobalMessage()
 
 function getApiBase() {
   if (window.location.hostname !== "localhost") {
@@ -50,10 +52,78 @@ onMounted(() => {
         @project-updated="handleProjectUpdated"
       />
     </main>
+
+    <!-- 全局操作反馈：来自 ProjectCard 等会在操作后卸载的组件 -->
+    <Teleport to="body">
+      <Transition name="toast">
+        <div
+          v-if="message"
+          class="toast"
+          :class="messageType === 'success' ? 'toast--success' : 'toast--error'"
+          role="alert"
+        >
+          <svg v-if="messageType === 'success'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {{ message }}
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
+.toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.toast svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.toast--success {
+  background: var(--color-success-light);
+  color: var(--color-success);
+  border: 1px solid var(--color-success-border);
+}
+
+.toast--error {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
 .page {
   min-height: 100vh;
   display: flex;

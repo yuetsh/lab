@@ -1,61 +1,69 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import db, { schema, initDatabase } from "./database"
-import { eq, desc, like } from "drizzle-orm"
+import { eq, desc, sql } from "drizzle-orm"
 import { randomBytes } from "crypto"
 
 const app = new Hono()
 
-// 启用CORS
-app.use("*", cors())
+// 生产环境前端与 API 同源（经 Caddy 代理），只有本地开发的 Vite dev server 需要跨域
+app.use(
+  "*",
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:4173"],
+  })
+)
+
+// 项目名称长度上限：上传与更新必须一致，否则改名就能绕过上传时的限制
+const MAX_PROJECT_NAME_LENGTH = 20
+
+// 校验是否为 HTML 文件（扩展名大小写不敏感）
+const isHtmlFile = (name: string): boolean => name.toLowerCase().endsWith(".html")
+
+// 转义 LIKE 通配符，避免用户搜索的 % 和 _ 被当成模式匹配
+const escapeLike = (value: string): string =>
+  value.replace(/[\\%_]/g, (ch) => "\\" + ch)
 
 // 生成安全的slug
 const generateSlug = (): string => {
   return randomBytes(6).toString('hex')
 }
 
+// 项目的元信息列。content 可能有 5MB，只在真正需要时单独查
+const projectColumns = {
+  id: schema.projects.id,
+  slug: schema.projects.slug,
+  name: schema.projects.name,
+  entryPoint: schema.projects.entryPoint,
+  size: schema.projects.size,
+  isActive: schema.projects.isActive,
+  uploadedAt: schema.projects.uploadedAt,
+}
+
 // 辅助函数：根据slug查找项目
 const findProjectBySlug = async (slug: string) => {
   const project = await db
-    .select()
+    .select(projectColumns)
     .from(schema.projects)
     .where(eq(schema.projects.slug, slug))
     .limit(1)
   return project[0] || null
 }
 
-// 辅助函数：创建项目
-const createProject = async (name: string, entryPoint: string) => {
-  const slug = generateSlug()
-  const uploadedAt = new Date().toISOString()
+// 辅助函数：创建项目（内容直接落在 projects 上）
+const createProject = async (name: string, file: globalThis.File) => {
   const projectResult = await db
     .insert(schema.projects)
     .values({
-      slug,
+      slug: generateSlug(),
       name,
-      entryPoint,
-      uploadedAt,
+      entryPoint: file.name,
+      content: await file.text(),
+      size: file.size,
+      uploadedAt: new Date().toISOString(),
     })
     .returning({ id: schema.projects.id, slug: schema.projects.slug })
   return projectResult[0]
-}
-
-// 辅助函数：存储文件
-const storeFile = async (
-  file: globalThis.File,
-  projectId: number,
-  filename: string
-) => {
-  const content = await file.text()
-  const uploadedAt = new Date().toISOString()
-  await db.insert(schema.files).values({
-    filename,
-    originalName: file.name,
-    content,
-    size: file.size,
-    projectId,
-    uploadedAt,
-  })
 }
 
 // 辅助函数：统一错误处理
@@ -76,17 +84,17 @@ app.get("/api/projects", async (c) => {
     
     // 如果有搜索查询，添加搜索条件
     if (searchQuery && searchQuery.trim()) {
-      const searchTerm = `%${searchQuery.trim()}%`
+      const searchTerm = `%${escapeLike(searchQuery.trim())}%`
       const projectList = await db
-        .select()
+        .select(projectColumns)
         .from(schema.projects)
-        .where(like(schema.projects.name, searchTerm))
+        .where(sql`${schema.projects.name} LIKE ${searchTerm} ESCAPE '\\'`)
         .orderBy(desc(schema.projects.id))
       
       return c.json(projectList)
     } else {
       const projectList = await db
-        .select()
+        .select(projectColumns)
         .from(schema.projects)
         .orderBy(desc(schema.projects.id))
       
@@ -107,15 +115,15 @@ app.get("/api/projects/:slug", async (c) => {
       return c.json({ error: "项目不存在" }, 404)
     }
 
-    // 查找项目中的文件
-    const projectFiles = await db
-      .select()
-      .from(schema.files)
-      .where(eq(schema.files.projectId, project.id))
+    const detail = await db
+      .select({ content: schema.projects.content })
+      .from(schema.projects)
+      .where(eq(schema.projects.slug, slug))
+      .limit(1)
 
     return c.json({
       ...project,
-      files: projectFiles,
+      content: detail[0]?.content ?? "",
     })
   } catch (error) {
     return handleError(c, error, "获取项目详情失败")
@@ -126,7 +134,16 @@ app.get("/api/projects/:slug", async (c) => {
 app.get("/projects/:slug", async (c) => {
   try {
     const slug = c.req.param("slug")
-    const project = await findProjectBySlug(slug)
+    const rows = await db
+      .select({
+        isActive: schema.projects.isActive,
+        content: schema.projects.content,
+      })
+      .from(schema.projects)
+      .where(eq(schema.projects.slug, slug))
+      .limit(1)
+
+    const project = rows[0]
 
     if (!project) {
       return c.json({ error: "项目不存在" }, 404)
@@ -136,18 +153,7 @@ app.get("/projects/:slug", async (c) => {
       return c.json({ error: "项目已停用" }, 403)
     }
 
-    // 查找项目中的文件
-    const targetFile = await db
-      .select()
-      .from(schema.files)
-      .where(eq(schema.files.projectId, project.id))
-      .limit(1)
-
-    if (!targetFile.length) {
-      return c.json({ error: "项目文件不存在" }, 404)
-    }
-
-    return new Response(targetFile[0].content, {
+    return new Response(project.content, {
       headers: { 
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-cache"
@@ -171,16 +177,21 @@ app.post("/api/upload", async (c) => {
       return c.json({ error: "没有选择文件" }, 400)
     }
 
-    if (!projectName || projectName.trim().length === 0) {
+    const name = projectName?.trim() ?? ""
+
+    if (!name) {
       return c.json({ error: "项目名称不能为空" }, 400)
     }
 
-    if (projectName.length > 20) {
-      return c.json({ error: "项目名称不能超过20个字符" }, 400)
+    if (name.length > MAX_PROJECT_NAME_LENGTH) {
+      return c.json(
+        { error: `项目名称不能超过${MAX_PROJECT_NAME_LENGTH}个字符` },
+        400
+      )
     }
 
     // 文件类型和大小验证
-    if (!file.name.endsWith(".html")) {
+    if (!isHtmlFile(file.name)) {
       return c.json({ error: "只支持HTML文件" }, 400)
     }
 
@@ -193,16 +204,14 @@ app.post("/api/upload", async (c) => {
       return c.json({ error: "文件不能为空" }, 400)
     }
 
-    const project = await createProject(projectName, file.name)
-    const filename = `file_${Date.now()}.html`
-    await storeFile(file, project.id, filename)
+    const project = await createProject(name, file)
 
     return c.json({
       id: project.id,
       slug: project.slug,
-      name: projectName,
+      name,
       message: "HTML文件上传成功",
-      url: `/projects/${project.slug}/`,
+      url: `/projects/${project.slug}`,
     })
   } catch (error) {
     return handleError(c, error, "上传失败")
@@ -254,26 +263,34 @@ app.put("/api/projects/:slug", async (c) => {
       return c.json({ error: "至少需要提供项目名称或文件" }, 400)
     }
 
-    // 更新项目名称
+    // 先把改动收集齐、校验完，最后一条 UPDATE 落库。
+    // 分成多条会出现"名字改了但文件没换成"这种半更新状态。
+    const updates: {
+      name?: string
+      entryPoint?: string
+      content?: string
+      size?: number
+    } = {}
+
     if (projectName) {
-      if (projectName.trim().length === 0) {
+      const name = projectName.trim()
+
+      if (!name) {
         return c.json({ error: "项目名称不能为空" }, 400)
       }
 
-      if (projectName.length > 50) {
-        return c.json({ error: "项目名称不能超过50个字符" }, 400)
+      if (name.length > MAX_PROJECT_NAME_LENGTH) {
+        return c.json(
+          { error: `项目名称不能超过${MAX_PROJECT_NAME_LENGTH}个字符` },
+          400
+        )
       }
 
-      await db
-        .update(schema.projects)
-        .set({ name: projectName.trim() })
-        .where(eq(schema.projects.slug, slug))
+      updates.name = name
     }
 
-    // 更新文件
     if (file) {
-      // 文件类型和大小验证
-      if (!file.name.endsWith(".html")) {
+      if (!isHtmlFile(file.name)) {
         return c.json({ error: "只支持HTML文件" }, 400)
       }
 
@@ -286,39 +303,15 @@ app.put("/api/projects/:slug", async (c) => {
         return c.json({ error: "文件不能为空" }, 400)
       }
 
-      // 更新入口文件名
-      await db
-        .update(schema.projects)
-        .set({ entryPoint: file.name })
-        .where(eq(schema.projects.slug, slug))
-
-      // 更新文件内容（更新第一个文件，或创建新文件）
-      const existingFiles = await db
-        .select()
-        .from(schema.files)
-        .where(eq(schema.files.projectId, project.id))
-        .limit(1)
-
-      const content = await file.text()
-      const filename = `file_${Date.now()}.html`
-
-      if (existingFiles.length > 0) {
-        // 更新现有文件
-        await db
-          .update(schema.files)
-          .set({
-            filename,
-            originalName: file.name,
-            content,
-            size: file.size,
-            uploadedAt: new Date().toISOString(),
-          })
-          .where(eq(schema.files.id, existingFiles[0].id))
-      } else {
-        // 创建新文件
-        await storeFile(file, project.id, filename)
-      }
+      updates.entryPoint = file.name
+      updates.content = await file.text()
+      updates.size = file.size
     }
+
+    await db
+      .update(schema.projects)
+      .set(updates)
+      .where(eq(schema.projects.slug, slug))
 
     // 返回更新后的项目信息
     const updatedProject = await findProjectBySlug(slug)
@@ -341,10 +334,6 @@ app.delete("/api/projects/:slug", async (c) => {
       return c.json({ error: "项目不存在" }, 404)
     }
 
-    // 删除项目相关的所有文件
-    await db.delete(schema.files).where(eq(schema.files.projectId, project.id))
-
-    // 删除项目
     await db.delete(schema.projects).where(eq(schema.projects.slug, slug))
 
     return c.json({ message: "项目删除成功" })

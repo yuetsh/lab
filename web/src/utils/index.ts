@@ -2,10 +2,9 @@ import type { Project } from "../types"
 
 // 格式化日期
 export const formatDate = (dateString: string): string => {
-  if (dateString === "CURRENT_TIMESTAMP") {
-    return "刚刚"
-  }
-
+  // 老库里有 uploaded_at 存成字面量 "CURRENT_TIMESTAMP" 的坏数据（schema 默认值
+  // 写错导致）。真实上传时间已经无从恢复，交给下面的无效日期分支显示"未知时间"，
+  // 而不是谎称"刚刚"。
   const date = new Date(dateString)
 
   if (isNaN(date.getTime())) {

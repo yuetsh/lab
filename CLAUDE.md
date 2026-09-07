@@ -52,22 +52,26 @@ The Docker setup exposes port 8089 on the host, mapping to Caddy on port 80.
 
 ### Server (`server/src/`)
 - `index.ts` — Hono app with all REST routes
-- `database.ts` — SQLite connection via `bun:sqlite` + Drizzle ORM; `initDatabase()` creates tables via raw SQL on startup (no migration files)
-- `schema.ts` — Drizzle table definitions for `projects` and `files`
+- `database.ts` — SQLite connection via `bun:sqlite` + Drizzle ORM; `initDatabase()` creates the table via raw SQL on startup (no migration files) and runs an idempotent migration that folds the legacy `files` table into `projects`
+- `schema.ts` — Drizzle table definition for `projects` (HTML content lives on the row itself)
 - DB file lives at `server/data/uploads.db` (persisted via Docker volume `lab-data`)
 
 **API endpoints:**
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/projects` | List projects (supports `?search=`) |
-| GET | `/api/projects/:slug` | Project detail with files |
+| GET | `/api/projects/:slug` | Project detail (metadata + HTML content) |
 | POST | `/api/upload` | Upload new HTML project (`multipart/form-data`: `file`, `projectName`) |
 | PUT | `/api/projects/:slug` | Update project name and/or file |
 | PATCH | `/api/projects/:slug/toggle` | Toggle active/inactive |
 | DELETE | `/api/projects/:slug` | Delete project and its files |
 | GET | `/projects/:slug` | Serve the HTML file content directly |
 
-Projects store HTML file content as text in SQLite. Each project has a 12-char hex slug (`randomBytes(6).toString('hex')`). Inactive projects return 403 on the serve route.
+Projects store HTML file content as text in SQLite, on the `projects` row itself. Each project has a
+12-char hex slug (`randomBytes(6).toString('hex')`). Inactive projects return 403 on the serve route.
+
+`GET /api/projects` and the internal `findProjectBySlug` select an explicit column list that omits
+`content` — a plain `select()` would ship every project's full HTML with the list.
 
 ### Web (`web/src/`)
 - `services/api.ts` — All API calls; auto-detects base URL (localhost → `http://localhost:3000/api`, else same-origin `/api`)
@@ -77,6 +81,9 @@ Projects store HTML file content as text in SQLite. Each project has a 12-char h
 - Components: `ProjectUpload.vue` (upload form), `ProjectList.vue` (list + search), `ProjectCard.vue` (individual project with edit/delete/toggle)
 
 ### Key Constraints
-- Only `.html` files are accepted, max 5MB, project name max 20 chars (50 on update)
+- Only `.html` files are accepted (extension check is case-insensitive), max 5MB, project name max
+  20 chars on both upload and update (`MAX_PROJECT_NAME_LENGTH`)
+- Caddy caps request bodies at 6MB for `/api/*`; the app's own 5MB check only runs after the whole
+  body has been read into memory
 - File content is stored as text in SQLite, not on disk
 - No authentication — this is intended for internal/lab use

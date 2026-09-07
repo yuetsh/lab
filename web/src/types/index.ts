@@ -4,6 +4,7 @@ export interface Project {
   slug: string
   name: string
   entryPoint: string
+  size: number
   isActive: boolean
   uploadedAt: string
 }
@@ -23,20 +24,9 @@ export interface ToggleResponse {
   isActive: boolean
 }
 
-// 项目文件类型
-export interface ProjectFile {
-  id: number
-  filename: string
-  originalName: string
-  content: string
-  size: number
-  projectId: number
-  uploadedAt: string
-}
-
-// 项目详情类型（包含文件）
+// 项目详情类型（额外带上 HTML 内容）
 export interface ProjectDetail extends Project {
-  files: ProjectFile[]
+  content: string
 }
 
 // 更新项目响应类型

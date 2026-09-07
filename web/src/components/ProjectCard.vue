@@ -2,7 +2,7 @@
 import { ref } from "vue"
 import { api } from "../services/api"
 import { formatDate, getProjectUrl, copyToClipboard } from "../utils"
-import { useMessage } from "../composables/useMessage"
+import { useGlobalMessage } from "../composables/useGlobalMessage"
 import type { Project, ProjectDetail } from "../types"
 
 interface Props {
@@ -17,7 +17,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const { showMessage } = useMessage()
+const { showMessage } = useGlobalMessage()
 
 const isEditing = ref(false)
 const isLoading = ref(false)
@@ -169,8 +169,8 @@ const saveEdit = async () => {
     showMessage("请输入项目名称", "error")
     return
   }
-  if (editProjectName.value.length > 50) {
-    showMessage("项目名称不能超过50个字符", "error")
+  if (editProjectName.value.trim().length > 20) {
+    showMessage("项目名称不能超过20个字符", "error")
     return
   }
 
@@ -321,6 +321,7 @@ const saveEdit = async () => {
         删除
       </button>
     </div>
+
   </div>
 
   <!-- Edit Modal -->
@@ -346,7 +347,7 @@ const saveEdit = async () => {
               id="editProjectName"
               placeholder="请输入项目名称"
               class="field-input"
-              maxlength="50"
+              maxlength="20"
               :disabled="isLoading"
             />
             <span class="field-hint">最多50个字符</span>
